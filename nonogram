@@ -1,0 +1,72 @@
+import pycosat
+def solve_nonogram(rows, cols):
+    num_rows = len(rows)
+    num_cols = len(cols)
+
+    variables = [[0 for _ in range(num_cols)] for _ in range(num_rows)]
+    counter = 1
+
+    for row in range(num_rows):
+        for col in range(num_cols):
+            variables[row][col] = counter
+            counter += 1
+
+    clauses = []
+
+    for row in range(num_rows):
+        for col in range(num_cols):
+            clauses.append([variables[row][col], -variables[row][col]])
+
+    for row, hint_row in enumerate(rows):
+        clauses.extend(get_row_clauses(variables[row], hint_row))
+
+    for col, hint_col in enumerate(cols):
+        column_vars = [variables[row][col] for row in range(num_rows)]
+        clauses.extend(get_row_clauses(column_vars, hint_col))
+
+    solution = pycosat.solve(clauses)
+
+    if solution != "UNSAT":
+        nonogram_grid = [[1 if variables[row][col] in solution else 0 for col in range(num_cols)] for row in range(num_rows)]
+        return nonogram_grid
+    else:
+        return None
+
+def get_row_clauses(row_vars, hint_row):
+    num_cells = len(row_vars)
+    hint_len = len(hint_row)
+
+    clauses = []
+    start = 0
+
+    for hint in hint_row:
+        clause = []
+        for i in range(start, start + hint):
+            clause.append(row_vars[i])
+        clauses.append(clause)
+        start += hint + 1
+
+    gap_vars = [-row_vars[i] for i in range(num_cells) if i < start]
+    clauses.append(gap_vars)
+
+    return clauses
+
+def display_nonogram(nonogram):
+    for row in nonogram:
+        for cell in row:
+            if cell == 1:
+                print("█", end="")  # Print a shaded cell
+            else:
+                print(" ", end="")
+        print()
+rows = [[2, 1], [3], [1, 3], [4], [2, 2]]
+cols = [[2, 1], [3], [2, 1], [4], [1, 1]]
+# rows = [[3], [2, 1], [1, 1], [3], [2, 1]]
+# cols = [[2, 1], [1, 2], [3], [1, 2], [3]]
+solution = solve_nonogram(rows, cols)
+
+if solution:
+    print("Nonogram solution:")
+    display_nonogram(solution)
+else:
+    print("No solution found.")
